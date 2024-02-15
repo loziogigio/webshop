@@ -10,7 +10,7 @@ from webshop.webshop.product_data_engine.filters import ProductFiltersBuilder
 class WebshopItemGroup(ItemGroup, WebsiteGenerator):
 	nsm_parent_field = "parent_item_group"
 	website = frappe._dict(
-		condition_field="show_in_website",
+		condition_field="enabled",
 		template="templates/generators/item_group.html",
 		no_cache=1,
 		no_breadcrumbs=1,
@@ -35,8 +35,8 @@ class WebshopItemGroup(ItemGroup, WebsiteGenerator):
 			parent_item_group = frappe.get_doc("Item Group", self.parent_item_group)
 
 			# make parent route only if not root
-			if parent_item_group.parent_item_group and parent_item_group.route:
-				self.route = parent_item_group.route + "/"
+			if parent_item_group.parent_item_group and parent_item_group.item_group_name:
+				self.route = parent_item_group.item_group_name + "/"
 
 		self.route += self.scrub(self.item_group_name)
 
@@ -118,9 +118,8 @@ def get_parent_item_groups(item_group_name, from_item=False):
 
 	item_group = frappe.db.get_value("Item Group", item_group_name, ["lft", "rgt"], as_dict=1)
 	parent_groups = frappe.db.sql(
-		"""select name, route from `tabItem Group`
+		"""select name, item_group_name from `tabItem Group`
 		where lft <= %s and rgt >= %s
-		and show_in_website=1
 		order by lft asc""",
 		(item_group.lft, item_group.rgt),
 		as_dict=True,
@@ -136,12 +135,12 @@ def invalidate_cache_for(doc, item_group=None):
 	for d in get_parent_item_groups(item_group):
 		item_group_name = frappe.db.get_value("Item Group", d.get("name"))
 		if item_group_name:
-			clear_cache(frappe.db.get_value("Item Group", item_group_name, "route"))
+			clear_cache(frappe.db.get_value("Item Group", item_group_name, "item_group_name"))
 
 def get_child_groups_for_website(item_group_name, immediate=False, include_self=False):
 	"""Returns child item groups *excluding* passed group."""
 	item_group = frappe.get_cached_value("Item Group", item_group_name, ["lft", "rgt"], as_dict=1)
-	filters = {"lft": [">", item_group.lft], "rgt": ["<", item_group.rgt], "show_in_website": 1}
+	filters = {"lft": [">", item_group.lft], "rgt": ["<", item_group.rgt], "disabled": 0}
 
 	if immediate:
 		filters["parent_item_group"] = item_group_name
@@ -149,4 +148,4 @@ def get_child_groups_for_website(item_group_name, immediate=False, include_self=
 	if include_self:
 		filters.update({"lft": [">=", item_group.lft], "rgt": ["<=", item_group.rgt]})
 
-	return frappe.get_all("Item Group", filters=filters, fields=["name", "route"], order_by="name")
+	return frappe.get_all("Item Group", filters=filters, fields=["name", "item_group_name"], order_by="name")

@@ -98,18 +98,20 @@ class WebsiteItem(WebsiteGenerator):
 			frappe.throw(message, title=_("Already Published"))
 
 	def publish_unpublish_desk_item(self, publish=True):
-		if (
-			frappe.db.get_value("Item", self.item_code, "published_in_website")
-			and publish
-		):
-			return  # if already published don't publish again
-		frappe.db.set_value("Item", self.item_code, "published_in_website", publish)
+		#it is useless because there is no published_in_website paramaete in item
+		return
+		# if (
+		# 	frappe.db.get_value("Item", self.item_code, "published_in_website")
+		# 	and publish
+		# ):
+		# 	return  # if already published don't publish again
+		# frappe.db.set_value("Item", self.item_code, "published_in_website", publish)
 
 	def make_route(self):
 		"""Called from set_route in WebsiteGenerator."""
 		if not self.route:
 			return (
-				cstr(frappe.db.get_value("Item Group", self.item_group, "route"))
+				cstr(frappe.db.get_value("Item Group", self.item_group, "item_group_name"))
 				+ "/"
 				+ self.scrub(
 					(self.item_name if self.item_name else self.item_code)
